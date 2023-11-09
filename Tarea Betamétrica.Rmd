@@ -1,0 +1,138 @@
+---
+title: "Tarea Betamétrica"
+author: "Richard Guanoluisa"
+date: "2023-11-06"
+output: html_document
+---
+
+# Carga librerías
+```{r}
+library(openxlsx)
+library(dplyr)
+library(ggplot2)
+library(fdth)
+library(stringr)
+library(stargazer)
+library(lmtest)
+
+```
+# Carga datos
+```{r}
+# Cargar datos en datos_db
+datos_db <- read.xlsx("C:\\Users\\Richard\\Documents\\DOCS RICHARD\\Cursos\\2023 Reto betametrica/empresas_HEBM18.xlsx",na.strings = T)
+# Filtrar datos completos
+datos_db <- datos_db %>% 
+  filter(complete.cases(.))
+```
+
+# 1. Realizar un gráfico de barras considerando las empresas de la región SIERRA
+```{r}
+# Resumen del conjunto de datos
+summary(datos_db)
+# Asignar datos limpios y filtrados a new_db
+new_db <- datos %>% 
+  select(NOMBRE,REGIÓN,PROVINCIA,INGRESOS,CANT..EMPLEADOS,UTILIDAD,CIUDAD) %>% 
+  filter(REGIÓN == "SIERRA")
+# Reducción de valores
+new_db$INGRESOS <- nuevadata$INGRESOS/1000
+# Histograma de Ingresos 
+summary(new_db$INGRESOS)
+tabla_frecuencia <- fdt(new_db$INGRESOS,start = 10,end = 100,h=10)
+tabla_frecuencia1 <- data.frame(tabla_frecuencia$table)
+tabla_frecuencia1$rango <- seq(20,100,10)
+tabla_frecuencia1$cf... <- round(tabla_frecuencia1$cf...,0)
+View(tabla_frecuencia1)
+# Gráfico del histograma 
+g1 <- ggplot(data = tabla_frecuencia1,
+       aes(x=seq(10,90,10),
+           y=f)) + 
+  geom_bar(stat = "identity",fill="royalblue")+
+  geom_text(aes(label=f),position="identity",vjust=0,size=6)+
+  scale_x_continuous(breaks = tabla_frecuencia1$rango)+
+  theme(axis.text.x = element_text(size = 12,angle = 90))+
+  labs(title = "Frecuencia absoluta de los ingresos anuales",subtitle = "Pequeñas empresas de la Sierra del Ecuador")+
+  xlab("Ingresos por rango en miles")+
+  ylab("Número de empresas")
+g1
+```
+# 2. Realiza una regresión simple que explique el ingreso en función de la cantidad de empleados. Para efectos del ejercicio, se debe filtrar los casos cuyo ingreso y cantidad de empleados sea igual a 0. La regresión sólo debe construirse usando la provincia del Guayas. Se debe reportar los resultados, la interpretación de los coeficientes, las pruebas de autocorrelación, heterocedasticidad.
+```{r}
+# Directorio
+setwd("C:\\Users\\Richard\\Documents\\DOCS RICHARD\\Cursos\\2023 Reto betametrica\\Tarea Betamétrica/")
+# Archivo
+db_r <- openxlsx::read.xlsx("empresas_HEBM18.xlsx")
+# asginar datos filtrados a db_r
+db_r_fil <- db_r %>% 
+  select(PROVINCIA,INGRESOS,CANT..EMPLEADOS) %>% 
+  filter(INGRESOS>0 & CANT..EMPLEADOS>0 & PROVINCIA== "GUAYAS                                            ")
+db_r_fil_1 <- db_r_fil %>% 
+  select(INGRESOS,CANT..EMPLEADOS)
+summary(db_r_fil_1)
+modelo <- lm(INGRESOS~.,data = db_r_fil_1)
+summary(modelo)
+#ingresos = intercepto +b * cant empleado +error
+#ingresos = 3.541+1.852*cant empleados
+#Gráficos
+grafico1=ggplot(db_r_fil_1,aes(CANT..EMPLEADOS,INGRESOS))
+grafico1+geom_point()+geom_smooth(method = "lm",colour="Red")
+# Prueba de autocorrelación
+modelo_corr <- dwtest(modelo) 
+print(modelo_corr)
+# Prueba de heterocedasticidad
+bptest_result <- bptest(modelo)
+print(bptest_result)
+# Respuesta
+# Por cada empleado se añade 18.45 en los ingresos, sin embargo, debido al bajísimo valor de R-squared, 
+# o existe gran impacto del número de empleados para aumentar los ingesos.
+# el gráfico 1 muestra que no existe la relación lineal entre las variables.
+# autocorrelación
+# DW=1.69 no existe alta correlación entre las variables
+# heterocedasticidad
+# p es 0.7429, por lo que no hay suficiente evidencia para rechazar la hipótesis nula.
+
+```
+# 3. Realiza el mismo ejercicio del enunciado anterior, pero para pichincha. En este caso, sólo reporta los resultados y la explicación de los coeficiente.
+```{r}
+
+# Directorio
+setwd("C:\\Users\\Richard\\Documents\\DOCS RICHARD\\Cursos\\2023 Reto betametrica\\Tarea Betamétrica/")
+# Archivo
+db_r <- openxlsx::read.xlsx("empresas_HEBM18.xlsx")
+# asginar datos filtrados a db_r
+db_r_fil_P <- db_r %>% 
+  select(PROVINCIA,INGRESOS,CANT..EMPLEADOS) %>% 
+  filter(INGRESOS>0 & CANT..EMPLEADOS>0 & PROVINCIA== "PICHINCHA                                         ")
+db_r_fil_P1 <- db_r_fil_P %>% 
+  select(INGRESOS,CANT..EMPLEADOS)
+summary(db_r_fil_P1)
+modelo_P <- lm(INGRESOS~.,data = db_r_fil_P1)
+summary(modelo_P)
+
+#ingresos = intercept +b * cant empleado +error
+#ingresos = 352108.24+483.54*cant empleados
+
+#Gráficos
+grafico2=ggplot(db_r_fil_P1,aes(CANT..EMPLEADOS,INGRESOS))
+grafico2+geom_point()+geom_smooth(method = "lm",colour="Blue")
+
+# Prueba de autocorrelación
+modelo_corr_P <- dwtest(modelo_P) 
+print(modelo_corr_P)
+
+# Prueba de heterocedasticidad
+bptest_result_P <- bptest(modelo_P)
+print(bptest_result_P)
+
+# Respuesta
+# Por cada empleado se añade 483.54 en los ingresos, sin embargo, debido al bajísimo valor de R-squared, 
+# no existe gran impacto del número de empleados para aumentar los ingesos.
+# A diferencia de Guayas, el número de empleados tiene mayor impacto en la generación de INGRESOS en Pichincha
+# el gráfico 1_P muestra que no existe la relación lineal entre las variables.
+# autocorrelación
+# DW=1.54 no existe alta correlación entre las variables
+# heterocedasticidad
+# No hay suficiente evidencia para rechazar la hipótesis nula.
+
+```
+
+
